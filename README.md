@@ -21,7 +21,7 @@ The app requires the path of the folder with exported files. It is the folder th
 
 ## How to export data to Google My Maps
 1. Log in to https://www.google.com/maps/d/
-2. Create a new map and add a new layer.
+2. Create a new map and add a new layer. Note that there's the limit of 10 layers per map.
 3. Click 'Import' link.
 4. Drag and drop your GPX file.
 5. Click on 'Individual styles' and select 'Uniform' style.
