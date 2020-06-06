@@ -84,6 +84,51 @@ namespace RuntasticExportProcessor
             }
 
             Console.ForegroundColor = consoleColor;
+
+            // list = dictionary[sportType][year]
+            var dictionary = list
+                .GroupBy(x => x.SportTypeId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g
+                        .GroupBy(x => x.StartTime.Year)
+                        .ToDictionary(
+                            g2 => g2.Key, 
+                            g2 => g2.OrderBy(x => x.StartTime).ToList()));
+
+
+            foreach (var sportType in dictionary.Keys)
+            {
+                foreach (var year in dictionary[sportType].Keys)
+                {
+                    var items = dictionary[sportType][year];
+
+                    if (items.All(x => x.HasGpsRoute))
+                    {
+                        var resultFilename = $"{year}{sportType}.gpx";
+                        var resultFileContent = string.Empty;
+
+                        foreach (var item in items)
+                        {
+                            resultFileContent += string.Empty; // todo
+                        }
+
+                        resultFileContent = resultFileContent.Replace(@"</trk>(.|\r|\n)+?<trk>", @"</trk>\r\n<trk>"); // todo
+
+                        var resultPath = Path.Combine(string.Empty, resultFilename); // todo
+
+                        File.WriteAllText(resultPath, resultFileContent);
+                    }
+                    else if (items.All(x => !x.HasGpsRoute))
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        throw new Exception($"{sportType} sometimes does have GPS data and sometimes doesn't, wtf?");
+                    }
+                }
+            }
         }
 
         private static DateTime UnixTimeStampToDateTime(double unixTimeStamp)
