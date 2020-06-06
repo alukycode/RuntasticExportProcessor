@@ -2,98 +2,140 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using RuntasticExportProcessor.Enums;
 using RuntasticExportProcessor.Types;
 
 namespace RuntasticExportProcessor
 {
-    class Program
+    public static class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            //var rootPath = args.FirstOrDefault();
+            var folderPaths = GetFolderPaths(args);
 
-            //if (string.IsNullOrWhiteSpace(rootPath))
-            //{
-            //    Console.Write("Provide a parameter with the path to the folder with exported data:");
-            //    rootPath = Console.ReadLine();
-            //}
+            var list = ReadDataFromFiles(folderPaths);
 
-            var rootPath = @"C:\Users\Anton\OneDrive\runtastic\runtastic export 2020 05 31";
+            OutputDataToConsole(list);
+
+            CreateResultFiles(list, folderPaths.Result);
+
+            Console.WriteLine("Done!");
+            Console.ReadLine();
+        }
+
+        private static FolderPathsData GetFolderPaths(string[] args)
+        {
+            var rootPath = args.FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(rootPath))
+            {
+                Console.Write("Enter the path to the folder with exported data (leave empty to use current folder): ");
+                rootPath = Console.ReadLine();
+            }
+
+            if (string.IsNullOrWhiteSpace(rootPath))
+            {
+                rootPath = Environment.CurrentDirectory;
+            }
+
+            Console.WriteLine($"Root folder path: {rootPath}");
 
             var sportSessionsFolderPath = Path.Combine(rootPath, "Sport-sessions");
-
             var gpsDataFolderPath = Path.Combine(sportSessionsFolderPath, "GPS-data");
 
-            var sportSessionFiles = Directory.GetFiles(sportSessionsFolderPath, "*.json");
-
-            var list = new List<TotalData>();
-
-            foreach (var sportSessionFile in sportSessionFiles)
+            var isGpsDataFolderExists = Directory.Exists(gpsDataFolderPath);
+            if (!isGpsDataFolderExists)
             {
-                var rawJson = File.ReadAllText(sportSessionFile);
+                throw new ApplicationException("'Sport-sessions\\GPS-data' folder is not found.");
+            }
 
-                var parsed = JsonConvert.DeserializeObject<ParsedJsonData>(rawJson);
+            var resultFolderPath = Path.Combine(rootPath, $"_Processed {DateTime.Now:yyyy-MM-dd HH-mm-ss}");
 
-                var sportSessionFilename = Path.GetFileNameWithoutExtension(sportSessionFile);
+            Directory.CreateDirectory(resultFolderPath);
 
-                var gpsDataFilename = sportSessionFilename + ".gpx";
+            Console.WriteLine($"Result folder path: {resultFolderPath}");
 
-                var gpsDataFile = Path.Combine(gpsDataFolderPath, gpsDataFilename);
+            Console.WriteLine();
 
-                var hasGpsRoute = File.Exists(gpsDataFile);
+            return new FolderPathsData
+            {
+                Root = rootPath,
+                SportSessions = sportSessionsFolderPath,
+                GpsData = gpsDataFolderPath,
+                Result = resultFolderPath,
+            };
+        }
 
-                var sportTypeId = Enum.Parse<SportsTypeIds>(parsed.sport_type_id);
-                var startTime = UnixTimeStampToDateTime(parsed.start_time / 1000);
-                var timeZone = parsed.start_time_timezone_offset / 60 / 60 / 1000;
+        private static List<SportSessionData> ReadDataFromFiles(FolderPathsData folderPaths)
+        {
+            var sportSessionFilePaths = Directory.GetFiles(folderPaths.SportSessions, "*.json");
 
-                var total = new TotalData
+            var results = new List<SportSessionData>();
+
+            foreach (var sportSessionFilePath in sportSessionFilePaths)
+            {
+                var rawJson = File.ReadAllText(sportSessionFilePath);
+
+                var parsedJson = JsonConvert.DeserializeObject<ParsedJsonData>(rawJson);
+
+                var sportSessionFileName = Path.GetFileName(sportSessionFilePath);
+                var gpsDataFileName = Path.ChangeExtension(sportSessionFileName, ".gpx");
+                var gpsDataFilePath = Path.Combine(folderPaths.GpsData, gpsDataFileName);
+                var hasGpsRoute = File.Exists(gpsDataFilePath);
+
+                var sportTypeId = Enum.Parse<ActivityTypeId>(parsedJson.sport_type_id);
+                var startTime = UnixTimeStampToDateTime(parsedJson.start_time / 1000.0);
+                var timeZone = parsedJson.start_time_timezone_offset / 60 / 60 / 1000;
+
+                var session = new SportSessionData
                 {
-                    ParsedJson = parsed,
+                    ParsedJson = parsedJson,
                     Json = rawJson,
-                    HasGpsRoute = hasGpsRoute,
-                    SportTypeId = sportTypeId,
+                    GpsDataFilePath = gpsDataFilePath,
+                    HasGpsData = hasGpsRoute,
+
+                    ActivityTypeId = sportTypeId,
                     StartTime = startTime,
-                    TimeZone = (int)timeZone,
+                    TimeZone = (int) timeZone,
                 };
 
-
-                list.Add(total);
+                results.Add(session);
             }
 
-            var consoleColor = Console.ForegroundColor;
+            return results;
+        }
 
+        private static void OutputDataToConsole(List<SportSessionData> list)
+        {
             foreach (var item in list.OrderByDescending(x => x.StartTime))
             {
-                if (item.HasGpsRoute)
+                var gpsMessage = string.Empty;
+
+                if (!item.HasGpsData)
                 {
-                    Console.ForegroundColor = ConsoleColor.White;
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
+                    gpsMessage = "(no GPS)";
                 }
 
-                Console.WriteLine($"{nameof(item.SportTypeId)}: {item.SportTypeId} ({item.ParsedJson.sport_type_id})");
-                Console.WriteLine($"{nameof(item.StartTime)}: {item.StartTime} ({item.ParsedJson.start_time})");
-                Console.WriteLine($"{nameof(item.TimeZone)}: {item.TimeZone } ({item.ParsedJson.start_time_timezone_offset})");
-                Console.WriteLine($"HasGpsRoute: {item.HasGpsRoute}");
-
-                Console.WriteLine();
+                Console.WriteLine($"{item.StartTime:yyyy-MM-dd HH:mm} {item.TimeZone:+0;-#}: {item.ActivityTypeId} {gpsMessage}");
             }
 
-            Console.ForegroundColor = consoleColor;
+            Console.WriteLine();
+        }
 
+        private static void CreateResultFiles(List<SportSessionData> list, string resultFolderPath)
+        {
             // list = dictionary[sportType][year]
             var dictionary = list
-                .GroupBy(x => x.SportTypeId)
+                .GroupBy(x => x.ActivityTypeId)
                 .ToDictionary(
                     g => g.Key,
                     g => g
                         .GroupBy(x => x.StartTime.Year)
                         .ToDictionary(
-                            g2 => g2.Key, 
+                            g2 => g2.Key,
                             g2 => g2.OrderBy(x => x.StartTime).ToList()));
 
 
@@ -103,23 +145,27 @@ namespace RuntasticExportProcessor
                 {
                     var items = dictionary[sportType][year];
 
-                    if (items.All(x => x.HasGpsRoute))
+                    if (items.All(x => x.HasGpsData))
                     {
-                        var resultFilename = $"{year}{sportType}.gpx";
-                        var resultFileContent = string.Empty;
+                        var resultFileContentBuilder = new StringBuilder();
 
                         foreach (var item in items)
                         {
-                            resultFileContent += string.Empty; // todo
+                            var gpsDataFileContent = File.ReadAllText(item.GpsDataFilePath);
+                            resultFileContentBuilder.Append(gpsDataFileContent);
                         }
 
-                        resultFileContent = resultFileContent.Replace(@"</trk>(.|\r|\n)+?<trk>", @"</trk>\r\n<trk>"); // todo
+                        var resultFileContent = Regex.Replace(resultFileContentBuilder.ToString(), "</trk>(.|\r|\n)+?<trk>", "</trk>\r\n<trk>");
 
-                        var resultPath = Path.Combine(string.Empty, resultFilename); // todo
+                        var resultFileName = $"{year} {sportType}.gpx";
+
+                        var resultPath = Path.Combine(resultFolderPath, resultFileName);
 
                         File.WriteAllText(resultPath, resultFileContent);
+
+                        Console.WriteLine($"File created: {resultFileName}");
                     }
-                    else if (items.All(x => !x.HasGpsRoute))
+                    else if (items.All(x => !x.HasGpsData))
                     {
                         continue;
                     }
@@ -129,14 +175,16 @@ namespace RuntasticExportProcessor
                     }
                 }
             }
+
+            Console.WriteLine();
         }
 
         private static DateTime UnixTimeStampToDateTime(double unixTimeStamp)
         {
             // Unix timestamp is seconds past epoch
-            DateTime dtDateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            dtDateTime = dtDateTime.AddSeconds(unixTimeStamp).ToLocalTime();
-            return dtDateTime;
+            var epochStart = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+            var result = epochStart.AddSeconds(unixTimeStamp).ToLocalTime();
+            return result;
         }
     }
 }

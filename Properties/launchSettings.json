@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "RuntasticExportProcessor": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Users\\Anton\\OneDrive\\runtastic\\runtastic export 2020 05 31\""
+    }
+  }
+}

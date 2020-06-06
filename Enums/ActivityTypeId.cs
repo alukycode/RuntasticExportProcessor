@@ -1,6 +1,6 @@
 ﻿namespace RuntasticExportProcessor.Enums
 {
-    public enum SportsTypeIds
+    public enum ActivityTypeId
     {
         Running            = 1,
         NordicWalking      = 2,
