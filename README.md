@@ -8,9 +8,14 @@ Tool to convert GPS data from *Adidas Running* app (ex-Runtastic) to convenient 
 3. Export data button (can take more than 1 day to wait)
 
 ## How to run an app
-App requires the path to the folder with exported files (the folder that contains Sport-sessions folder, data_information.pdf file, etc).  
-You can pass the path using following ways:
-- Pass it as console app argument. Check the launchSettings.json file - I used it to pass the path to the app in Debug mode.
+App requires the path to the folder with exported files. It is the folder that contains Sport-sessions folder, data_information.pdf file, etc.
+
+### How to run the code
+- Run the app using dotnet compiler: `dotnet run "C:\Users\<Username>\Downloads\runtastic export folder"`
+- Get an executable file: `dotnet publish -r win-x64 -c Release /p:PublishSingleFile=true /p:PublishTrimmed=true`
+
+### How to pass the path to folder
+- Pass it as console app argument. If you work in Visual studio, check the launchSettings.json file - I used it to pass the path to the app in Debug mode.
 - Start console app and copy-paste path to the console window.
 - Put executable file into necessary folder, start the app and just press enter when console app will prompt for the path.
 
