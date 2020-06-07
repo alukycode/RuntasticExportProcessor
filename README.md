@@ -2,12 +2,12 @@
 
 Tool to convert GPS data from *Adidas Running* app (ex-Runtastic) to convenient format ready to export into *Google My Maps*
 
-## Where to get data
+## Where to get the data
 1. Log in to https://www.runtastic.com/
 2. Top-right menu (near the photo) -> Settings (Account and Data)
 3. Export data button (can take more than 1 day to wait)
 
-## How to run an app
+## How to run the app
 App requires the path to the folder with exported files. It is the folder that contains Sport-sessions folder, data_information.pdf file, etc.
 
 ### How to run the code
@@ -26,3 +26,6 @@ App requires the path to the folder with exported files. It is the folder that c
 4. Drag and drop your gpx file.
 5. (optional) Click on 'Individual styles' and select 'Uniform' style.
 6. (optional) Click on icon right from 'All items' and select smallest 'Point' icon.
+
+### Result example
+![Alt text](Img/GoogleMyMapsExample.png)
