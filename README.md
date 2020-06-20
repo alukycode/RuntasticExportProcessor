@@ -27,7 +27,7 @@ The app requires the path of the folder with exported files. It is the folder th
 5. Click on 'Individual styles' and select 'Uniform' style.
 6. Click on icon right from 'All items' and select the smallest 'Point' icon.
 
-Note that there's the limit of 10 layers per map, but you can easily copy the entire map and then group your layers by activity or decade.
+Note that there's the limit of 10 layers per map, but you can easily copy the entire map and then group your layers by activity or decade. There's also a limit 5mb for uploaded file.
 
 ### Result example
 ![Alt text](Img/GoogleMyMapsExample.png)
